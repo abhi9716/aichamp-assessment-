@@ -22,20 +22,32 @@ class LoadDataToolResult(TypedDict):
     error: str | None
 
 
-def load_data_from_drive_tool(google_drive_link: str) -> LoadDataToolResult:
+def calculate_means_tool(
+    google_drive_link: str,
+    descrete_column: str,
+    numeric_column: str
+) -> LoadDataToolResult:
     """
-    Tool that loads a CSV dataset from a Google Drive shareable link.
-    The link must be in the format: https://drive.google.com/file/d/<FILE_ID>/view?usp=sharing
+    Tool to calculate mean values of a numeric column grouped by a discrete column
+    from a CSV file loaded via Google Drive.
     """
     try:
         import pandas as pd
+
+        # Extract file ID and construct download URL
         file_id = google_drive_link.split("/d/")[1].split("/")[0]
         csv_url = f"https://drive.google.com/uc?id={file_id}"
+
+        # Load CSV into DataFrame
         df = pd.read_csv(csv_url)
-        return {"result": df.head().to_string(), "error": None}
+
+        # Compute means grouped by the discrete column
+        means = df.groupby(descrete_column)[numeric_column].mean()
+
+        return {"result": means.to_string(), "error": None}
+
     except Exception as e:
         return {"result": None, "error": str(e)}
-
 
 def submit_answer_tool(answer: Any) -> SubmitAnswerToolResult:
     """
@@ -174,21 +186,29 @@ async def run_single_test(
 
     return run_id, success, result
 
-
 async def main(concurrent: bool = True):
+    # Define available tools
     tools: list[ToolUnionParam] = [
         {
-            "name": "load_data_from_drive",
-            "description": "Loads a CSV file from a Google Drive link into a pandas DataFrame.",
+            "name": "means",
+            "description": "Calculate means of a numeric column grouped by a discrete column in a pandas DataFrame.",
             "input_schema": {
                 "type": "object",
                 "properties": {
                     "google_drive_link": {
                         "type": "string",
-                        "description": "Google Drive shareable link of the CSV file.",
-                    }
+                        "description": "Google Drive shareable link to the CSV file.",
+                    },
+                    "descrete_column": {
+                        "type": "string",
+                        "description": "Discrete column to group by.",
+                    },
+                    "numeric_column": {
+                        "type": "string",
+                        "description": "Numeric column to calculate the mean for.",
+                    },
                 },
-                "required": ["google_drive_link"],
+                "required": ["google_drive_link", "descrete_column", "numeric_column"],
             },
         },
         {
@@ -196,30 +216,38 @@ async def main(concurrent: bool = True):
             "description": "Submit the final answer",
             "input_schema": {
                 "type": "object",
-                "properties": {"answer": {"description": "The final answer to submit"}},
+                "properties": {
+                    "answer": {
+                        "description": "The final answer to submit"
+                    }
+                },
                 "required": ["answer"],
             },
         },
     ]
 
+    # Map tool names to handler functions
     tool_handlers = {
-        "load_data_from_drive": load_data_from_drive_tool,
-        "submit_answer": submit_answer_tool,
+        "means": calculate_means_tool,
+        "submit_answer": submit_answer_tool,  # Make sure submit_answer_tool is defined elsewhere
     }
 
     # 🔗 Your Google Drive dataset prompt
     drive_link = "https://drive.google.com/file/d/18aRqId7sKY-R4dyRt2dd6ackibk1IUhg/view?usp=sharing"
 
     prompt = f"""
-        You are an ML engineer analyzing a dataset.
-        1. Load the CSV data from this Google Drive link: {drive_link}.
-        2. Use load_data_from_drive tool to know about columns.
-        2. Clean the data by dropping rows with missing values and removing duplicates.
-        3. Which CSAT Score has highest average issue response time?
-        4. Give output in single string and unique value.
+       You are an ML analyst tasked with exploring a customer satisfaction dataset.
+
+      1. Compute the average CSAT score for each manager using the calculate_means_tool. Load the CSV data from this Google Drive link: {drive_link}.
+      2. Identify the manager with the highest average CSAT score.
+      3. Submit the manager's last name as a single string using the submit_answer tool.
+
+      Remember:
+      - Do not include any extra text or explanations in the answer.
+      - Only return the manager's last name.
 """
 
-    expected_answer = "1"  # Adjust this based on your actual dataset result
+    expected_answer = "Chen"  # Adjust this based on your actual dataset result
 
     num_runs = 10
     print(f"Running {num_runs} dataset analysis test iterations...\n{'=' * 60}")
@@ -259,4 +287,4 @@ async def main(concurrent: bool = True):
 
 
 if __name__ == "__main__":
-    asyncio.run(main(concurrent=False))
+    asyncio.run(main(concurrent=True))
