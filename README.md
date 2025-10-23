@@ -1,7 +1,5 @@
 # aichamp-assessment-
 
-hello-py
-===
 
 Setup instructions:
 
