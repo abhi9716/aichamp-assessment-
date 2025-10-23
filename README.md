@@ -24,7 +24,7 @@ Setup instructions:
 
    or
 
-   !ANTHROPIC_API_KEY=your_api_key_here uv run main.py
+   !ANTHROPIC_API_KEY=your_api_key_here uv run main.py   (in colab)
    ```
 
 ## Execution Modes
