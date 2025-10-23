@@ -7,12 +7,12 @@ Setup instructions:
 
 1. Clone the repository:
    ```
-   git clone https://github.com/preferencemodel/hello-py.git
+   git clone https://github.com/abhi9716/aichamp-assessment-.git
    ```
 
 2. Navigate to the project directory:
    ```
-   cd hello-py
+   cd aichamp-assessment-
    ```
 
 3. Set up `ANTHROPIC_API_KEY` environment variable:
